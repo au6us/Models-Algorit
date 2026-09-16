@@ -13,10 +13,10 @@ namespace ArenaSurvivor.Weapons
             _pool = new ObjectPool<Projectile>(prefab, poolParent, prewarmCount);
         }
 
-        public Projectile Create(Vector2 position, Vector2 direction, float speed, float damage, float lifetime)
+        public Projectile Create(Vector2 position, Vector2 direction, float speed, float damage, float lifetime, float knockbackForce)
         {
             var projectile = _pool.Get(position, Quaternion.identity);
-            projectile.Launch(position, direction, speed, damage, lifetime, Release);
+            projectile.Launch(position, direction, speed, damage, lifetime, knockbackForce, Release);
             return projectile;
         }
 

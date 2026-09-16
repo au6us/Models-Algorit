@@ -22,6 +22,9 @@ namespace ArenaSurvivor.Core.Combat
         public float CurrentHealth { get; private set; }
         public bool IsAlive => CurrentHealth > 0f;
 
+        /// <summary>Sigue en la ventana de invulnerabilidad post-golpe (0 si no aplica).</summary>
+        public bool IsInvulnerable => Time.time < _invulnerableUntil;
+
         /// <summary>Se dispara con (vidaActual, vidaMaxima) cada vez que la vida cambia.</summary>
         public event Action<float, float> HealthChanged;
 

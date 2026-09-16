@@ -8,11 +8,15 @@ namespace ArenaSurvivor.Enemies
     {
         public readonly Vector2 Position;
         public readonly int ExperienceReward;
+        public readonly Color Color;
+        public readonly bool DropsChest;
 
-        public EnemyKilledEvent(Vector2 position, int experienceReward)
+        public EnemyKilledEvent(Vector2 position, int experienceReward, Color color, bool dropsChest)
         {
             Position = position;
             ExperienceReward = experienceReward;
+            Color = color;
+            DropsChest = dropsChest;
         }
     }
 }

@@ -17,11 +17,24 @@ namespace ArenaSurvivor.Enemies
         [SerializeField] private Color color = Color.red;
         [SerializeField] private float scale = 1f;
 
+        [Header("Elite / Jefe")]
+        [Tooltip("Enemigo elite o jefe: al morir suelta un cofre y, mientras esté vivo, un " +
+                 "indicador en el borde de pantalla apunta hacia él si está fuera de cámara.")]
+        [SerializeField] private bool isSpecial;
+
+        [Tooltip("Además de 'especial', es un jefe: muestra su propia barra de vida en el HUD.")]
+        [SerializeField] private bool isBoss;
+
+        [SerializeField] private string displayName = "Jefe";
+
         public float MaxHealth => maxHealth;
         public float MoveSpeed => moveSpeed;
         public float ContactDamage => contactDamage;
         public int ExperienceReward => experienceReward;
         public Color Color => color;
         public float Scale => scale;
+        public bool IsSpecial => isSpecial;
+        public bool IsBoss => isBoss;
+        public string DisplayName => displayName;
     }
 }

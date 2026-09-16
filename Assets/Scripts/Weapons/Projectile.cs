@@ -1,7 +1,9 @@
 using System;
 using UnityEngine;
 using ArenaSurvivor.Core.Combat;
+using ArenaSurvivor.Core.Events;
 using ArenaSurvivor.Core.Pooling;
+using ArenaSurvivor.Fx;
 
 namespace ArenaSurvivor.Weapons
 {
@@ -16,6 +18,7 @@ namespace ArenaSurvivor.Weapons
         private Action<Projectile> _releaseToPool;
         private float _damage;
         private float _lifetime;
+        private float _knockbackForce;
         private float _timer;
         private bool _released;
 
@@ -24,12 +27,14 @@ namespace ArenaSurvivor.Weapons
             _rigidbody = GetComponent<Rigidbody2D>();
         }
 
-        public void Launch(Vector2 position, Vector2 direction, float speed, float damage, float lifetime, Action<Projectile> releaseToPool)
+        public void Launch(Vector2 position, Vector2 direction, float speed, float damage, float lifetime,
+            float knockbackForce, Action<Projectile> releaseToPool)
         {
             transform.position = position;
             _rigidbody.linearVelocity = direction.normalized * speed;
             _damage = damage;
             _lifetime = lifetime;
+            _knockbackForce = knockbackForce;
             _releaseToPool = releaseToPool;
         }
 
@@ -66,6 +71,13 @@ namespace ArenaSurvivor.Weapons
             }
 
             damageable.TakeDamage(_damage);
+
+            if (_knockbackForce > 0f && other.TryGetComponent<IKnockbackable>(out var knockbackable))
+            {
+                knockbackable.ApplyKnockback(_rigidbody.linearVelocity, _knockbackForce);
+            }
+
+            EventManager.Publish(new WeaponImpactEvent(transform.position));
             ReleaseSelf();
         }
 

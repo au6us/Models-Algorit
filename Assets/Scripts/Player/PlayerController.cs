@@ -1,21 +1,28 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using ArenaSurvivor.Core.Combat;
 
 namespace ArenaSurvivor.Player
 {
     /// <summary>
     /// Responsable únicamente del movimiento del jugador: lee el input y mueve el Rigidbody2D.
     /// No sabe nada de vida, armas ni nivel — esos viven en sus propios componentes (SRP).
+    /// También puede recibir un empujón (IKnockbackable) sin que quien lo golpea sepa nada de
+    /// cómo se mueve el jugador — solo pide "empujalo para este lado con esta fuerza".
     /// </summary>
     [RequireComponent(typeof(Rigidbody2D))]
-    public class PlayerController : MonoBehaviour
+    public class PlayerController : MonoBehaviour, IKnockbackable
     {
         [SerializeField] private float moveSpeed = 5f;
+
+        [Tooltip("Qué tan rápido se apaga el empujón de un golpe (más alto = se frena antes).")]
+        [SerializeField] private float knockbackDamping = 10f;
 
         private Rigidbody2D _rigidbody;
         private PlayerStats _stats;
         private InputSystem_Actions _inputActions;
         private Vector2 _moveInput;
+        private Vector2 _knockbackVelocity;
 
         private void Awake()
         {
@@ -59,10 +66,16 @@ namespace ArenaSurvivor.Player
             _moveInput = Vector2.zero;
         }
 
+        public void ApplyKnockback(Vector2 direction, float force)
+        {
+            _knockbackVelocity = direction.normalized * force;
+        }
+
         private void FixedUpdate()
         {
             var speedMultiplier = _stats != null ? _stats.MoveSpeedMultiplier : 1f;
-            _rigidbody.linearVelocity = _moveInput * moveSpeed * speedMultiplier;
+            _rigidbody.linearVelocity = _moveInput * moveSpeed * speedMultiplier + _knockbackVelocity;
+            _knockbackVelocity = Vector2.Lerp(_knockbackVelocity, Vector2.zero, knockbackDamping * Time.fixedDeltaTime);
         }
     }
 }

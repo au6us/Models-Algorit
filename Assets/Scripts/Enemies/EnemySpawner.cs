@@ -18,10 +18,28 @@ namespace ArenaSurvivor.Enemies
         public float UnlockTimeSeconds;
     }
 
+    /// <summary>Un jefe que aparece una sola vez, a un tiempo fijo desde que arrancó la partida.</summary>
+    [Serializable]
+    public class BossSpawnEntry
+    {
+        public EnemyData Data;
+        public float SpawnTimeSeconds;
+    }
+
+    /// <summary>Una oleada sorpresa: a un tiempo fijo, aparecen varios enemigos juntos de golpe.</summary>
+    [Serializable]
+    public class BurstSpawnEntry
+    {
+        public float TriggerTimeSeconds;
+        public int EnemyCount = 15;
+    }
+
     /// <summary>
     /// Genera enemigos alrededor del jugador, fuera de cámara, con una tasa que aumenta
     /// con el tiempo (más rápido = más difícil) y mezclando tipos más fuertes a medida que
     /// se desbloquean. Usa el EnemyFactory (Pool + Factory) para no instanciar/destruir nunca.
+    /// Además: enemigos elite (raros, dan más recompensa), jefes a tiempo fijo, y oleadas
+    /// sorpresa — las tres cosas reusan el mismo factory y el mismo cálculo de posición.
     /// </summary>
     public class EnemySpawner : MonoBehaviour
     {
@@ -37,6 +55,19 @@ namespace ArenaSurvivor.Enemies
         [SerializeField] private float spawnRadiusMax = 24f;
         [SerializeField] private int maxAliveEnemies = 150;
 
+        [Header("Enemigos elite")]
+        [Tooltip("Tipos elite y a partir de qué momento pueden aparecer — pensado para " +
+                 "activarse recién cuando ya cuesta subir de nivel (partida avanzada).")]
+        [SerializeField] private EnemyWaveEntry[] eliteWaveEntries;
+        [Tooltip("Probabilidad de que un spawn normal sea, en cambio, un elite (una vez desbloqueados).")]
+        [SerializeField] [Range(0f, 1f)] private float eliteSpawnChance = 0.08f;
+
+        [Header("Jefes")]
+        [SerializeField] private BossSpawnEntry[] bossSpawns;
+
+        [Header("Oleadas sorpresa")]
+        [SerializeField] private BurstSpawnEntry[] burstSpawns;
+
         [Tooltip("Transform del Ground (un Square escalado): sus límites se calculan a partir " +
                  "de su escala, así que un spawn nunca cae afuera del área jugable.")]
         [SerializeField] private Transform groundTransform;
@@ -44,6 +75,9 @@ namespace ArenaSurvivor.Enemies
 
         private EnemyFactory _factory;
         private readonly List<EnemyData> _unlockedBuffer = new List<EnemyData>();
+        private readonly List<EnemyData> _unlockedEliteBuffer = new List<EnemyData>();
+        private readonly HashSet<int> _triggeredBosses = new HashSet<int>();
+        private readonly HashSet<int> _triggeredBursts = new HashSet<int>();
 
         private float _elapsed;
         private float _spawnTimer;
@@ -84,6 +118,9 @@ namespace ArenaSurvivor.Enemies
                 _spawnTimer = CurrentSpawnInterval();
                 TrySpawnOne();
             }
+
+            CheckScheduledBosses();
+            CheckScheduledBursts();
         }
 
         private float CurrentSpawnInterval()
@@ -99,13 +136,66 @@ namespace ArenaSurvivor.Enemies
                 return;
             }
 
-            var data = PickEnemyData();
+            var data = TryPickEliteData(out var eliteData) ? eliteData : PickEnemyData();
             if (data == null)
             {
                 return;
             }
 
-            var position = GetSpawnPositionAroundTarget();
+            SpawnAt(data, GetSpawnPositionAroundTarget());
+        }
+
+        private void CheckScheduledBosses()
+        {
+            for (var i = 0; i < bossSpawns.Length; i++)
+            {
+                if (_triggeredBosses.Contains(i) || _elapsed < bossSpawns[i].SpawnTimeSeconds)
+                {
+                    continue;
+                }
+
+                _triggeredBosses.Add(i);
+                if (bossSpawns[i].Data != null)
+                {
+                    // El jefe siempre aparece, sin importar el tope de enemigos vivos —
+                    // es un evento fijo, no debería poder "no pasar" por mala suerte.
+                    SpawnAt(bossSpawns[i].Data, GetSpawnPositionAroundTarget());
+                }
+            }
+        }
+
+        private void CheckScheduledBursts()
+        {
+            for (var i = 0; i < burstSpawns.Length; i++)
+            {
+                if (_triggeredBursts.Contains(i) || _elapsed < burstSpawns[i].TriggerTimeSeconds)
+                {
+                    continue;
+                }
+
+                _triggeredBursts.Add(i);
+                EventManager.Publish(new WaveIncomingEvent());
+
+                for (var n = 0; n < burstSpawns[i].EnemyCount; n++)
+                {
+                    if (_aliveCount >= maxAliveEnemies)
+                    {
+                        break;
+                    }
+
+                    var data = PickEnemyData();
+                    if (data == null)
+                    {
+                        break;
+                    }
+
+                    SpawnAt(data, GetSpawnPositionAroundTarget());
+                }
+            }
+        }
+
+        private void SpawnAt(EnemyData data, Vector2 position)
+        {
             _factory.Create(data, position, target);
             _aliveCount++;
         }
@@ -128,6 +218,28 @@ namespace ArenaSurvivor.Enemies
             }
 
             return _unlockedBuffer[UnityEngine.Random.Range(0, _unlockedBuffer.Count)];
+        }
+
+        private bool TryPickEliteData(out EnemyData data)
+        {
+            data = null;
+            _unlockedEliteBuffer.Clear();
+
+            foreach (var entry in eliteWaveEntries)
+            {
+                if (entry.Data != null && _elapsed >= entry.UnlockTimeSeconds)
+                {
+                    _unlockedEliteBuffer.Add(entry.Data);
+                }
+            }
+
+            if (_unlockedEliteBuffer.Count == 0 || UnityEngine.Random.value > eliteSpawnChance)
+            {
+                return false;
+            }
+
+            data = _unlockedEliteBuffer[UnityEngine.Random.Range(0, _unlockedEliteBuffer.Count)];
+            return true;
         }
 
         private Vector2 GetSpawnPositionAroundTarget()

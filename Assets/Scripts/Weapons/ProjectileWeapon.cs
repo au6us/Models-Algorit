@@ -1,5 +1,7 @@
 using UnityEngine;
+using ArenaSurvivor.Core.Events;
 using ArenaSurvivor.Enemies;
+using ArenaSurvivor.Fx;
 
 namespace ArenaSurvivor.Weapons
 {
@@ -12,6 +14,9 @@ namespace ArenaSurvivor.Weapons
         [Tooltip("No dispara a enemigos más lejos que esto — así las muertes pasan dentro de " +
                  "lo que la cámara muestra, en vez de matar cosas que nunca se llegan a ver.")]
         [SerializeField] private float attackRange = 9f;
+
+        [Tooltip("Fuerza del empujón que recibe el enemigo al ser tocado por esta bala. 0 = sin empujón.")]
+        [SerializeField] private float knockbackForce = 3f;
 
         private ProjectileFactory _factory;
 
@@ -33,11 +38,13 @@ namespace ArenaSurvivor.Weapons
             var damage = CurrentDamage;
             var count = Data.GetProjectileCount(CurrentLevel);
 
+            EventManager.Publish(new WeaponFiredEvent());
+
             for (var i = 0; i < count; i++)
             {
                 var offsetIndex = i - (count - 1) / 2f;
                 var rotatedDirection = Quaternion.Euler(0f, 0f, offsetIndex * spreadAngleDegrees) * baseDirection;
-                _factory.Create(transform.position, rotatedDirection, Data.ProjectileSpeed, damage, Data.ProjectileLifetime);
+                _factory.Create(transform.position, rotatedDirection, Data.ProjectileSpeed, damage, Data.ProjectileLifetime, knockbackForce);
             }
         }
 

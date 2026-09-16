@@ -57,6 +57,11 @@ namespace ArenaSurvivor.Player
         }
     }
 
+    /// <summary>Se publica una sola vez, cuando el dash se desbloquea (PlayerDash).</summary>
+    public readonly struct DashUnlockedEvent : IGameEvent
+    {
+    }
+
     /// <summary>Se publica cada vez que cambia algún multiplicador de PlayerStats (para el HUD).</summary>
     public readonly struct PlayerStatsChangedEvent : IGameEvent
     {
