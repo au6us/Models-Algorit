@@ -6213,7 +6213,7 @@ MonoBehaviour:
   sounds:
   - id: 0
     clip: {fileID: 8300000, guid: feca55836deb89c44a2dd9f9aec336f3, type: 3}
-    volume: 1
+    volume: 0.3
   - id: 1
     clip: {fileID: 8300000, guid: 7aae34ae0c8cbd8458fe59e167ee84fd, type: 3}
     volume: 1
